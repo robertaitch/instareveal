@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ profile.username }} - Instagram Profile Analysis</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    const profileData = {{ profile | tojson | safe }};
+    
+    function exportJSON() {
+      fetch('/export/json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileData)
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Export failed');
+        return res.blob();
+      })
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${profileData.username}_profile.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(err => {
+        alert('Export failed: ' + err.message);
+      });
+    }
+    
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showNotification('Copied to clipboard!');
+      });
+    }
+    
+    function showNotification(message) {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.classList.remove('hidden');
+      setTimeout(() => {
+        notification.classList.add('hidden');
+      }, 2000);
+    }
+    
+    function goBack() {
+      window.history.back();
+    }
+    
+    function loadProfilePicture() {
+      const img = document.getElementById('profile-pic');
+      const placeholder = document.getElementById('profile-placeholder');
+      
+      if (img && img.src) {
+        img.onload = function() {
+          img.style.display = 'block';
+          placeholder.style.display = 'none';
+        };
+        
+        img.onerror = function() {
+          console.log('Failed to load profile picture:', img.src);
+          img.style.display = 'none';
+          placeholder.style.display = 'flex';
+        };
+        
+        if (img.complete && img.naturalHeight !== 0) {
+          img.style.display = 'block';
+          placeholder.style.display = 'none';
+        }
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', loadProfilePicture);
+  </script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    
+    <div id="notification" class="hidden fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+      Copied to clipboard!
+    </div>
+
+    <div class="bg-gray-800 rounded-lg shadow-xl overflow-hidden">
+      
+      <div class="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-center">
+        <h1 class="text-3xl font-bold text-white">Instagram Profile Analysis</h1>
+        <p class="text-blue-100 mt-2">Generated at {{ current_time }}</p>
+      </div>
+
+      <div class="p-8">
+        
+        <div class="flex flex-col md:flex-row items-center md:items-start gap-8 mb-8">
+          <div class="flex-shrink-0">
+            <div class="relative w-32 h-32">
+              {% if profile.profile_pic_url %}
+              <img 
+                id="profile-pic"
+                src="" 
+                alt="{{ profile.username }}" 
+                class="w-32 h-32 rounded-full border-4 border-gray-600 object-cover"
+                style="display: none;"
+                referrerpolicy="no-referrer"
+              />
+              {% endif %}
+              <div id="profile-placeholder" class="absolute inset-0 w-32 h-32 rounded-full border-4 border-gray-600 bg-gray-700 flex items-center justify-center" style="display: flex;">
+                <span class="text-4xl text-gray-400">👤</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex-1 text-center md:text-left">
+            <h2 class="text-4xl font-bold mb-2">{{ profile.full_name or profile.username }}</h2>
+            <p class="text-2xl text-gray-300 mb-4">@{{ profile.username }}</p>
+            
+            <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
+              {% if profile.is_verified %}
+              <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm">✓ Verified</span>
+              {% endif %}
+              {% if profile.is_private %}
+              <span class="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm">🔒 Private</span>
+              {% else %}
+              <span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm">📖 Public</span>
+              {% endif %}
+              {% if profile.is_business %}
+              <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm">💼 Business</span>
+              {% endif %}
+            </div>
+            
+            {% if profile.biography %}
+            <p class="text-gray-300 mb-4">{{ profile.biography }}</p>
+            {% endif %}
+            
+            {% if profile.external_url %}
+            <a href="{{ profile.external_url }}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">
+              {{ profile.external_url }}
+            </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+          
+          <div class="bg-gray-700 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-6 text-blue-400 flex items-center gap-2">📊 Statistics</h3>
+            <div class="space-y-4">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Followers:</span>
+                <span class="font-bold text-lg">{{ "{:,}".format(profile.followers) }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Following:</span>
+                <span class="font-bold text-lg">{{ "{:,}".format(profile.following) }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Posts:</span>
+                <span class="font-bold text-lg">{{ "{:,}".format(profile.posts_count) }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Tagged Posts:</span>
+                <span class="font-bold text-lg">{{ "{:,}".format(profile.tagged_posts) }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Highlights:</span>
+                <span class="font-bold text-lg">{{ "{:,}".format(profile.highlight_reel_count) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-700 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-6 text-green-400 flex items-center gap-2">📞 Contact Information</h3>
+            <div class="space-y-4">
+              {% if profile.obfuscated_email %}
+              <div>
+                <span class="text-gray-400 block text-sm mb-1">Obfuscated Email:</span>
+                <span class="text-yellow-400 font-mono text-sm cursor-pointer hover:text-yellow-300 break-all" onclick="copyToClipboard('{{ profile.obfuscated_email }}')">
+                  {{ profile.obfuscated_email }}
+                </span>
+              </div>
+              {% endif %}
+              
+              {% if profile.obfuscated_phone %}
+              <div>
+                <span class="text-gray-400 block text-sm mb-1">Obfuscated Phone:</span>
+                <span class="text-yellow-400 font-mono text-sm cursor-pointer hover:text-yellow-300" onclick="copyToClipboard('{{ profile.obfuscated_phone }}')">
+                  {{ profile.obfuscated_phone }}
+                </span>
+              </div>
+              {% endif %}
+              
+              {% if profile.business_email %}
+              <div>
+                <span class="text-gray-400 block text-sm mb-1">Business Email:</span>
+                <span class="text-blue-400 text-sm cursor-pointer hover:text-blue-300 break-all" onclick="copyToClipboard('{{ profile.business_email }}')">
+                  {{ profile.business_email }}
+                </span>
+              </div>
+              {% endif %}
+              
+              {% if profile.business_phone %}
+              <div>
+                <span class="text-gray-400 block text-sm mb-1">Business Phone:</span>
+                <span class="text-blue-400 text-sm cursor-pointer hover:text-blue-300" onclick="copyToClipboard('{{ profile.business_phone }}')">
+                  {{ profile.business_phone }}
+                </span>
+              </div>
+              {% endif %}
+              
+              {% if not (profile.obfuscated_email or profile.obfuscated_phone or profile.business_email or profile.business_phone) %}
+              <div class="text-gray-500 text-center py-8">No contact information available</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="bg-gray-700 rounded-lg p-6 md:col-span-2 xl:col-span-1">
+            <h3 class="text-xl font-bold mb-6 text-purple-400 flex items-center gap-2">ℹ️ Account Details</h3>
+            <div class="space-y-4">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">User ID:</span>
+                <span class="font-mono text-xs text-gray-200">{{ profile.user_id }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Account Type:</span>
+                <span class="text-gray-200">{{ profile.account_type }}</span>
+              </div>
+              {% if profile.category %}
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Category:</span>
+                <span class="text-gray-200">{{ profile.category }}</span>
+              </div>
+              {% endif %}
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Verified:</span>
+                <span class="{{ 'text-green-400' if profile.is_verified else 'text-red-400' }}">
+                  {{ "Yes" if profile.is_verified else "No" }}
+                </span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Private:</span>
+                <span class="{{ 'text-yellow-400' if profile.is_private else 'text-green-400' }}">
+                  {{ "Yes" if profile.is_private else "No" }}
+                </span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Business:</span>
+                <span class="{{ 'text-purple-400' if profile.is_business else 'text-gray-400' }}">
+                  {{ "Yes" if profile.is_business else "No" }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {% if profile.profile_pic_url %}
+        <div class="mt-8 bg-gray-700 rounded-lg p-6">
+          <h3 class="text-xl font-bold mb-4 text-orange-400 flex items-center gap-2">🖼️ Profile Picture URL</h3>
+          <div class="bg-gray-800 rounded-lg p-4">
+            <p class="text-sm text-gray-400 mb-3">High Resolution Profile Picture:</p>
+            <div class="bg-gray-900 p-3 rounded border border-gray-600">
+              <code class="text-green-400 text-xs break-all cursor-pointer hover:text-green-300 select-all" onclick="copyToClipboard('{{ profile.profile_pic_url }}')">{{ profile.profile_pic_url }}</code>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Click to copy URL</p>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-8 flex flex-wrap gap-4 justify-center">
+          <button 
+            onclick="exportJSON()" 
+            class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-medium transition-all transform hover:scale-105 flex items-center gap-2"
+          >
+            📄 Export JSON
+          </button>
+          <button 
+            onclick="goBack()" 
+            class="bg-gray-600 hover:bg-gray-700 px-8 py-3 rounded-lg font-medium transition-all transform hover:scale-105 flex items-center gap-2"
+          >
+            ← Back to Search
+          </button>
+        </div>
+
+      </div>
+    </div>
+    
+    <div class="text-center mt-6 text-gray-400 text-sm">
+      <p>⚠️ For educational purposes only - Respect user privacy</p>
+    </div>
+  </div>
+</body>
+</html>
