@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InstaReveal - Instagram Profile Fetcher</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    function debugProfile() {
+      const username = document.getElementById('username').value.trim();
+      const sessionid = document.getElementById('sessionid').value.trim();
+      const csrftoken = document.getElementById('csrftoken').value.trim();
+      
+      if (!username || !sessionid) {
+        alert('Please enter both username and session ID');
+        return;
+      }
+      
+      const debugBtn = document.getElementById('debug-btn');
+      debugBtn.innerHTML = 'Debugging...';
+      debugBtn.disabled = true;
+      
+      fetch('/debug_profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, sessionid, csrftoken })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const popup = window.open('', 'Debug Data', 'width=800,height=600,scrollbars=yes');
+          popup.document.write(`
+            <html>
+              <head>
+                <title>Instagram Profile Debug Data</title>
+                <style>
+                  body { font-family: monospace; background: #1a1a1a; color: #e0e0e0; margin: 20px; }
+                  pre { background: #2d2d2d; padding: 15px; border-radius: 5px; overflow-x: auto; }
+                  .endpoint { color: #4CAF50; }
+                  .fields { color: #2196F3; }
+                </style>
+              </head>
+              <body>
+                <h2>Instagram Profile Debug Data</h2>
+                <p><strong class="endpoint">Endpoint:</strong> ${data.endpoint}</p>
+                <p><strong class="fields">Available Fields:</strong> ${data.available_fields.join(', ')}</p>
+                <h3>Raw Data:</h3>
+                <pre>${JSON.stringify(data.raw_data, null, 2)}</pre>
+              </body>
+            </html>
+          `);
+        } else {
+          alert('❌ Debug failed: ' + data.error);
+        }
+      })
+      .catch(err => {
+        alert('❌ Debug failed: ' + err.message);
+      })
+      .finally(() => {
+        debugBtn.innerHTML = 'Debug Data';
+        debugBtn.disabled = false;
+      });
+    }
+    
+    function testAuth() {
+      const sessionid = document.getElementById('sessionid').value.trim();
+      const csrftoken = document.getElementById('csrftoken').value.trim();
+      
+      if (!sessionid) {
+        alert('Please enter a session ID first');
+        return;
+      }
+      
+      const testBtn = document.getElementById('test-btn');
+      testBtn.innerHTML = 'Testing...';
+      testBtn.disabled = true;
+      
+      fetch('/test_auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionid, csrftoken })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('✅ Session ID is valid!');
+        } else {
+          alert('❌ ' + data.error);
+        }
+      })
+      .catch(err => {
+        alert('❌ Test failed: ' + err.message);
+      })
+      .finally(() => {
+        testBtn.innerHTML = 'Test Auth';
+        testBtn.disabled = false;
+      });
+    }
+    
+    function validateForm() {
+      const username = document.getElementById('username').value.trim();
+      const sessionid = document.getElementById('sessionid').value.trim();
+      
+      if (!username || !sessionid) {
+        alert('Both username and session ID are required!');
+        return false;
+      }
+      
+      // Visa loading state
+      document.getElementById('submit-btn').innerHTML = 'Fetching...';
+      document.getElementById('submit-btn').disabled = true;
+      
+      return true;
+    }
+  </script>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-white min-h-screen flex items-center justify-center">
+  <div class="w-full max-w-md">
+    <form method="POST" onsubmit="return validateForm()" class="bg-gray-800/90 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700 space-y-6">
+      <div class="text-center">
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">InstaReveal</h1>
+        <p class="text-gray-400 mt-2">Instagram Profile Information Fetcher</p>
+      </div>
+      
+      {% if error %}
+      <div class="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
+        <strong>Error:</strong> {{ error }}
+      </div>
+      {% endif %}
+      
+      <div class="space-y-4">
+        <div>
+          <label for="sessionid" class="block text-sm font-medium text-gray-300 mb-2">Instagram Session ID</label>
+          <input 
+            id="sessionid" 
+            name="sessionid" 
+            type="text" 
+            placeholder="Enter your Instagram session ID..." 
+            required 
+            class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+          />
+        </div>
+        
+        <div>
+          <label for="csrftoken" class="block text-sm font-medium text-gray-300 mb-2">CSRF Token (Optional)</label>
+          <input 
+            id="csrftoken" 
+            name="csrftoken" 
+            type="text" 
+            placeholder="Enter CSRF token if available..." 
+            class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+          />
+          <p class="text-xs text-gray-400 mt-1">This can help with authentication issues</p>
+        </div>
+        
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Instagram Username</label>
+          <input 
+            id="username" 
+            name="username" 
+            type="text" 
+            placeholder="Enter Instagram username..." 
+            required 
+            class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+          />
+          <p class="text-xs text-gray-400 mt-1">Without the @ symbol</p>
+        </div>
+      </div>
+      
+      <div class="flex space-x-3">
+        <button 
+          id="test-btn" 
+          type="button" 
+          onclick="testAuth()"
+          class="flex-1 bg-yellow-600 hover:bg-yellow-700 py-3 rounded-xl font-semibold transition-all"
+        >
+          Test Auth
+        </button>
+        <button 
+          id="submit-btn" 
+          type="submit" 
+          class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-3 rounded-xl font-semibold transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+        >
+          Fetch Profile
+        </button>
+      </div>
+      
+      <div class="text-center text-xs text-gray-500 space-y-1">
+        <p>⚠️ This tool is for educational purposes only</p>
+        <p>Make sure you have permission to access the profile</p>
+      </div>
+    </form>
+    
+    <div class="mt-6 text-center">
+      <details class="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+        <summary class="cursor-pointer text-sm font-medium text-gray-300 hover:text-white">How to get Session ID & CSRF Token</summary>
+        <div class="mt-3 text-xs text-gray-400 space-y-2">
+          <p><strong>Method 1 - Get Session ID:</strong></p>
+          <p>1. Open Instagram in your browser and log in</p>
+          <p>2. Press F12 to open Developer Tools</p>
+          <p>3. Go to Application tab > Cookies > https://www.instagram.com</p>
+          <p>4. Find and copy the "sessionid" value</p>
+          <p>5. (Optional) Also copy the "csrftoken" value</p>
+          <br>
+          <p><strong>Method 2 - Get Full Cookie String:</strong></p>
+          <p>1. Go to Network tab in Developer Tools</p>
+          <p>2. Refresh Instagram page</p>
+          <p>3. Find any request to instagram.com</p>
+          <p>4. Copy the entire Cookie header</p>
+          <p>5. Paste it in the Session ID field</p>
+          <br>
+          <p class="text-yellow-400">💡 If you get authentication errors, try Method 2</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</body>
+</html>
