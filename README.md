@@ -3,6 +3,7 @@
 A simple Instagram profile analysis tool that fetches detailed information about Instagram profiles, including some data that's not usually visible in the regular interface.
 
 ![InstaReveal Interface](images/firstpage.png)
+
 ![Profile Analysis Results](images/resultexample.png)
 
 ## What it does
