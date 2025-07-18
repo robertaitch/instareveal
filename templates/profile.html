@@ -54,21 +54,46 @@
       const img = document.getElementById('profile-pic');
       const placeholder = document.getElementById('profile-placeholder');
       
-      if (img && img.src) {
+      console.log('Profile pic URL:', profileData.profile_pic_url);
+      
+      if (img && profileData.profile_pic_url) {
         img.onload = function() {
+          console.log('Image loaded successfully');
           img.style.display = 'block';
           placeholder.style.display = 'none';
         };
         
-        img.onerror = function() {
-          console.log('Failed to load profile picture:', img.src);
-          img.style.display = 'none';
-          placeholder.style.display = 'flex';
+        img.onerror = function(e) {
+          console.log('Image failed to load:', e);
+          console.log('Trying proxy method...');
+          
+          fetch('/proxy_image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: profileData.profile_pic_url })
+          })
+          .then(res => res.blob())
+          .then(blob => {
+            const url = URL.createObjectURL(blob);
+            img.src = url;
+          })
+          .catch(err => {
+            console.log('Proxy also failed:', err);
+            img.style.display = 'none';
+            placeholder.style.display = 'flex';
+          });
         };
         
         if (img.complete && img.naturalHeight !== 0) {
           img.style.display = 'block';
           placeholder.style.display = 'none';
+        } else {
+          img.src = profileData.profile_pic_url;
+        }
+      } else {
+        console.log('No profile pic URL available');
+        if (placeholder) {
+          placeholder.style.display = 'flex';
         }
       }
     }
@@ -98,11 +123,11 @@
               {% if profile.profile_pic_url %}
               <img 
                 id="profile-pic"
-                src="" 
                 alt="{{ profile.username }}" 
                 class="w-32 h-32 rounded-full border-4 border-gray-600 object-cover"
                 style="display: none;"
                 referrerpolicy="no-referrer"
+                crossorigin="anonymous"
               />
               {% endif %}
               <div id="profile-placeholder" class="absolute inset-0 w-32 h-32 rounded-full border-4 border-gray-600 bg-gray-700 flex items-center justify-center" style="display: flex;">

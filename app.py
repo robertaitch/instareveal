@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, send_file, jsonify
+from flask import Flask, request, render_template, send_file, jsonify, Response
 import requests
 import json
 import os
@@ -14,6 +14,38 @@ INSTAGRAM_API_HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "X-IG-App-ID": "936619743392459"
 }
+
+@app.route("/proxy_image", methods=["POST"])
+def proxy_image():
+    data = request.get_json()
+    image_url = data.get('url')
+    
+    if not image_url:
+        return jsonify({"error": "No URL provided"}), 400
+    
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": "https://www.instagram.com/",
+            "Accept": "image/*,*/*;q=0.8"
+        }
+        
+        response = requests.get(image_url, headers=headers, stream=True)
+        
+        if response.status_code == 200:
+            return Response(
+                response.content,
+                mimetype=response.headers.get('content-type', 'image/jpeg'),
+                headers={
+                    'Cache-Control': 'public, max-age=3600',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            )
+        else:
+            return jsonify({"error": "Failed to fetch image"}), 404
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/", methods=["GET", "POST"])
 def index():
